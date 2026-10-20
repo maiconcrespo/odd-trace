@@ -1,6 +1,10 @@
 # Testing this yourself
 
-Everything here runs on Node 22+ with **no dependencies and no install step**.
+Everything here needs Node 22 or newer and has **no dependencies and no install
+step**. The suite passes on Node 22.23, 24.10 and 24.22. It also happened to pass
+on Node 20.20, which is why the floor is a choice and not a technical limit; Node
+20 is simply no longer supported upstream. Versions in between and newer than
+24.22 were not run.
 
 ```bash
 git clone <this repo>
@@ -8,7 +12,7 @@ cd odd-trace
 npm test
 ```
 
-Expected: `35 pass / 0 fail`.
+Expected: every test passes (`npm test` prints the count).
 
 If a test fails on a fresh clone, that is a bug in this project, not in your
 machine — the suite builds its own git repository and its own transcripts in a
@@ -36,9 +40,10 @@ and how many of those commits actually exist in that clone.
 
 ## Why the numbers matter
 
-`corpus-audit.mjs` measured 144 feature documents in a real repository and found
-that 99 of the 184 commits they cite do not exist in the clone. That measurement
-is filed upstream as
+`corpus-audit.mjs` measured the feature documents of a real repository and found
+that many of the commits they cite cannot be resolved from a plain clone. The
+numbers, what they do and do not support, and the claims an earlier audit
+refuted are in [`FINDINGS.md`](FINDINGS.md). The report is filed upstream as
 [gentle-shell#2408](https://github.com/Gentleman-Programming/gentle-shell/issues/2408),
 together with the minimal document contract that would make the join complete.
 If you run the audit on your own project and get a different picture, that is

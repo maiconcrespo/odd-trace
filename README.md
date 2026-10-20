@@ -1,62 +1,39 @@
 # odd-trace
 
-A read-only join over evidence that gentle-shell already produces but never
+A read-only join over evidence that a project already produces but rarely
 connects:
 
 ```
 S# (spec) -> T# (task) -> commit -> observed check run -> review authority
 ```
 
-It emits no verdict, approves nothing, writes nothing, and never replaces the
+It emits no verdict, approves nothing, writes nothing, and never replaces a
 native reviewer. It reports what was observed, and where the chain is missing.
+
+`odd-trace` is an independent tool for projects that keep ODD (Organic Driven
+Development) feature documents. It is not part of, endorsed by, or affiliated
+with Gentle AI or gentle-shell; it reads their documents and transcripts.
 
 ---
 
 ## The problem, in one paragraph
 
-gentle-shell already records every ingredient separately: the feature document
-holds `S#` specs and `T#` tasks, git holds the commits, Pi's session
-transcripts hold every check run with its real output, and native Gentle AI
-holds review authority. **Nothing joins them.** Today the only link between a
-requirement and the evidence that it was verified is prose a human typed by
-hand:
+A feature document holds `S#` specs and `T#` tasks, git holds the commits, the
+agent's session transcripts hold every check run with its real output, and a
+native reviewer may hold review authority. **Nothing joins them.** Today the only
+link between a requirement and the evidence that it was verified is prose a human
+typed by hand:
 
 ```markdown
 - [x] Merge ... Evidence: `f6e6d93c`.
 ```
 
-If that line is missing, wrong, or the commit is gone, nobody can tell. When a
-feature is resumed weeks later, or when a reviewer asks "was this requirement
-actually verified?", the answer is markdown archaeology plus trust.
+If that line is missing, wrong, or the commit is unreachable, nobody can tell.
+When a feature is resumed weeks later, or when a reviewer asks "was this
+requirement actually verified?", the answer is markdown archaeology plus trust.
 
-`odd-trace` answers it in one command, and refuses to answer when the
-evidence is not there.
-
----
-
-## What it does not do
-
-These refusals are the design, not limitations to be fixed later:
-
-1. **It never emits a verdict.** It reports what a transcript contains.
-2. **It never writes.** No cache, no ledger, no state file. Read-only in the
-   strict sense: `git status` is unchanged after a run.
-3. **It never replaces the native reviewer.** Verdicts are admitted natively or
-   they do not exist.
-4. **It never infers evidence.** A missing run is reported as missing.
-
-## What it refuses to count as evidence
-
-Each of these was a real false positive found while building it:
-
-| Situation | Report |
-|---|---|
-| `node --test x | grep Error` — exit status belongs to `grep` | `NOT EVIDENCE (pipeline)` |
-| `ERR_MODULE_NOT_FOUND` — the runner never reached the test | `NOT EVIDENCE (load error)` |
-| a run performed before the commit it is attributed to | `STALE CHECK` |
-| a run in a different worktree | rejected by `cwd` match |
-| a filename that merely appears in `git diff` / `grep` | rejected by runner detection |
-| a runner that ran but whose outcome is not in the log | `runner ran, outcome not in log` — never rounded up to a pass |
+`odd-trace` answers it in one command, and refuses to answer when the evidence is
+not there.
 
 ---
 
@@ -64,7 +41,7 @@ Each of these was a real false positive found while building it:
 
 ```bash
 git clone <repo> && cd odd-trace
-npm test        # 35 pass, no dependencies, no install step
+npm test        # no dependencies, no install step
 ```
 
 The suite builds its own git repository and transcripts in a temp directory, so
@@ -73,23 +50,24 @@ it passes on a machine that has never seen the author's checkout. See
 
 ## Usage
 
-**Quick start:** stand inside the repository and run one command — see
-[`USAGE.md`](USAGE.md) for the full workflow, what to look at first, and how to
-read every verdict.
+Stand inside the repository you are auditing and run one command. See
+[`USAGE.md`](USAGE.md) for the full workflow, what to read first, and every
+verdict.
 
 ```bash
-# one feature document (repo defaults to the current directory)
 cd /path/to/repo
-node /path/to/gentletest/trace.mjs --doc odd/tasks/<feature>.md
+node /path/to/odd-trace/trace.mjs --doc odd/tasks/<feature>.md
+```
 
+```bash
 # explicit repo, from anywhere
 node trace.mjs --doc odd/tasks/<feature>.md --repo /path/to/repo
 
 # several documents at once
 node trace.mjs --doc a.md --doc b.md --repo .
 
-# include evidence from another Pi home (worktrees)
-node trace.mjs --doc odd/tasks/x.md --repo . --sessions ~/.gentle-shell/agent/sessions,/other/home/.gentle-shell/agent/sessions
+# include evidence from another agent home (worktrees)
+node trace.mjs --doc odd/tasks/x.md --repo . --sessions /home/a/sessions,/home/b/sessions
 
 # include the native review inventory
 node trace.mjs --doc odd/tasks/x.md --repo . --gentle-ai /path/to/gentle-ai
@@ -98,7 +76,7 @@ node trace.mjs --doc odd/tasks/x.md --repo . --gentle-ai /path/to/gentle-ai
 node trace.mjs --doc odd/tasks/x.md --repo . --json
 ```
 
-Output:
+Output (the document and counts are illustrative):
 
 ```
 S#   T#   commit   check                         code   verdict
@@ -128,99 +106,97 @@ spec coverage: 0/7 specs have an observed passing check
 
 ---
 
+## What it does not do
+
+These refusals are the design, not limitations to be fixed later:
+
+1. **It never emits a verdict.** It reports what a transcript contains.
+2. **It never writes.** No cache, no ledger, no state file. `git status` is
+   unchanged after a run.
+3. **It never replaces a native reviewer.** Verdicts are admitted natively or they
+   do not exist.
+4. **It never infers evidence.** A missing run is reported as missing.
+
+## What it refuses to count as evidence
+
+Each refusal is a rule of principle. Only the last row was a defect found in this
+tool's own first version.
+
+| Situation | Report |
+|---|---|
+| a test run through a pipe into a filter (`… \| grep Error`): the exit status belongs to the filter, not the runner | `NOT EVIDENCE (pipeline)` |
+| `ERR_MODULE_NOT_FOUND`: the runner never reached the test | `NOT EVIDENCE (load error)` |
+| a run performed before the commit it is attributed to | `STALE CHECK` |
+| a run in a different worktree | rejected by `cwd` match |
+| a runner that ran but whose outcome is not in the log | `runner ran, outcome not in log`, never rounded up to a pass |
+| a filename that merely appears in a `git diff` or `grep` command | rejected by runner detection (this one was a real bug: the first matcher accepted it as a run) |
+
+A redirect to a file (`> out.log 2>&1`) is **not** a pipeline: the runner is still
+the last command, so its exit status survives. An explicit `EXIT=n` echoed after
+such a redirect is honoured.
+
+A `NOT EVIDENCE (pipeline)` row means the exit status cannot be trusted. It does
+**not** mean a suite failed; the output may well show a pass. It is weak
+evidence, not a false green.
+
+---
+
 ## Tooling
 
 | File | Purpose |
 |---|---|
 | `trace.mjs` | the CLI |
-| `lib/analyze.mjs` | pure analysis core — no I/O, so tests exercise the shipped path |
-| `tests/analyze.test.mjs` | 28 analysis tests |
-| `tests/cli.test.mjs` | 6 CLI tests: bad usage, exit codes, JSON, zero writes |
+| `lib/analyze.mjs` | pure analysis core, no I/O, so tests exercise the shipped path |
+| `tests/` | the suite; `npm test` runs it |
+| `tests/fixture-repo.mjs` | builds a throwaway git repository and Pi-shaped transcripts |
 | `USAGE.md` | the workflow: where to stand, what to read first, every verdict |
+| `FORMAT.md` | the feature-document shapes the parser reads, and the minimal contract that would complete the join |
+| `FINDINGS.md` | **every measured number**, what it supports and what it does not |
 | `probe.mjs` | explain why one commit's transcript entries were accepted or rejected |
 | `coverage-report.mjs` | how many documents in a directory the join can read |
-| `corpus-audit.mjs` | how much of the evidence chain resolves in this clone |
+| `corpus-audit.mjs` | how much of the evidence chain resolves in a clone |
 | `diagnose.mjs` | which documents still resist the parser, and the offending line |
 
 ```bash
-node --test tests/*.test.mjs          # 35 pass
+npm test                              # the suite
 node corpus-audit.mjs <dir> <repo>    # evidence-chain coverage
 node coverage-report.mjs <dir>        # parser coverage
 ```
 
 ### Controls
 
-A checker that only ever prints "missing" proves nothing, so the suite ships a
-positive control and three negatives. All four run against the same fixture
-document with different transcripts:
+A checker that only ever prints "missing" proves nothing, so the suite contains a
+positive control and three negatives. Each builds its own repository and
+transcript at run time and checks the verdict the tool must give:
 
-| Fixture | Expected |
+| Test | Expected |
 |---|---|
-| `fixture/pos` | `observed pass`, 2/2 specs covered |
-| `fixture/neg-pipeline` | `NOT EVIDENCE (pipeline)` |
-| `fixture/neg-fail` | `observed fail` |
-| `fixture/neg-stale` | `STALE CHECK` |
+| positive control | `observed pass`, every spec covered |
+| a pipeline's exit status | `NOT EVIDENCE (pipeline)` |
+| a failing run | `observed fail` |
+| a run before the commit | `STALE CHECK` |
 
 ---
 
 ## Findings
 
-Measured against the 144 feature documents in `gentle-shell/odd/tasks`, with a
-full 6,281-commit clone. Reproduce with `node corpus-audit.mjs`.
+The measurements live in one place: [`FINDINGS.md`](FINDINGS.md). It states what
+was measured (one repository, one commit), the results, what they support, what
+they do **not** support, and a table of claims an earlier version of this project
+made that later audits refuted.
 
-| | |
-|---|---|
-| documents | 144 |
-| with `## Specs` | 46 |
-| with readable task rows | 106 |
-| joinable (both) | 46 |
-| specs parsed | 307 |
-| tasks parsed | 486 |
-| commits referenced by task rows | 183 |
-| **commits that exist in the clone** | **85** |
-| **commits missing from the clone** | **98** |
-| documents whose referenced commits all resolve | 23 |
-| **documents with at least one missing commit** | **24** |
-| documents with tasks but no commit reference | 59 |
-| documents with no `## Log` section | 98 |
-
-### What those numbers mean
-
-1. **The verification chain is broken at the source, not at the tool.** 98 of
-   183 referenced commits do not exist in the repository clone. They came from
-   worktrees or from rewritten history. A document can read *"done, verified
-   (L7)"* and be entirely unresolvable here.
-
-2. **A pipeline can fake a green suite, and it already did.** A real transcript
-   from this repository contains:
-
-   ```bash
-   node --experimental-strip-types --test tests/yolo-mode.test.ts 2>&1 \
-     | grep -m2 "ERR_MODULE_NOT_FOUND\|Error \[" | head -3
-   ```
-
-   It exited `0` while the suite **failed to load** (`Cannot find package
-   '@earendil-works/pi-tui'`). The exit status belonged to `grep`. Any gate
-   reading exit codes accepts this as success.
-
-3. **The ODD section contract is a naming convention, not a grammar.** All 144
-   documents have the required sections. Beneath the section names there are at
-   least five spec shapes and three task-row shapes, used interchangeably in the
-   same repository. See `FORMAT.md`.
-
-4. **59 documents describe completed work with no commit reference at all.**
-   The task is marked done and the work is unlinkable.
-
-5. **98 of 144 documents have no `## Log`**, so the verbatim user request and
-   the corrections that shaped the work are not recoverable from the document.
+In short: in the one corpus measured, a large share of the commits that feature
+documents cite cannot be resolved from a plain clone, many task rows name no
+commit at all, and most documents have no `## Log`. That is evidence the chain is
+hard to follow, not evidence that work went unverified.
 
 ### A note on the review dimension
 
 Native review authority is inventory-scoped: the ledger records candidate trees
-and lineages, not ODD task ids. `attachReview` matches a lineage to a commit
-only when the inventory names that commit, and otherwise reports `no match` or
-`none recorded`. It never invents a mapping. Any finer link belongs inside the
-native ledger — see `gentle-shell#554`.
+and lineages, not ODD task ids. `attachReview` matches a lineage to a commit only
+when the inventory names that commit, and otherwise reports `no match` or `none
+recorded`. It never invents a mapping. Any finer link belongs inside the native
+ledger.
 
 ---
 
@@ -233,15 +209,17 @@ native ledger — see `gentle-shell#554`.
 - **`gentle-shell#2366`** and **`#2369`** both note that harness effects are
   asserted rather than measured. `corpus-audit.mjs` is a small, concrete
   measurement of one such claim.
-- **`gentle-shell#2408`** is the report these numbers produced: the minimal
-  document contract (a commit and a check per task row) and the three findings
-  above, filed upstream with the reproduction.
+- **`gentle-shell#2408`** is the report these measurements produced: the minimal
+  document contract (a commit and a check per task row), filed upstream with the
+  reproduction.
 
 ## Status
 
-Prototype. Not wired into gentle-shell, no extension registered, nothing
+Prototype. Not wired into any harness, no extension registered, nothing
 persisted. It exists to answer one question with evidence: **does the join tell
-you something you do not already know?** Findings 1, 2 and 4 say yes.
+you something you do not already know?** On the one corpus measured, the answer is
+yes: the numbers in `FINDINGS.md` were not visible before the join existed. What
+that means for any other project is for its own audit to say.
 
-The ODD feature-document format used by this tool, and the minimal contract
-that would make the join complete, are documented in [`FORMAT.md`](FORMAT.md).
+The feature-document shapes this tool reads, and the minimal contract that would
+make the join complete, are in [`FORMAT.md`](FORMAT.md).

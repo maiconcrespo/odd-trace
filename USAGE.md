@@ -4,14 +4,15 @@
 an extension, it has no TUI command, and nothing runs in the background. It
 reads files, prints a table, exits. It never writes.
 
-Nothing needs installing: Node 24 is enough, and it has no dependencies.
+Nothing needs installing and it has no dependencies. It needs Node 22 or newer;
+see `CONTRIBUTING.md` for the versions the suite was actually run on.
 
 ---
 
 ## 1. Where to stand
 
-The script is at `gentletest/trace.mjs` and has no hard-coded paths, so it works
-from anywhere:
+The script is `trace.mjs` at the root of this repository and has no hard-coded
+paths, so it works from anywhere:
 
 ```bash
 node /path/to/odd-trace/trace.mjs --doc <file> [--repo <dir>]
@@ -62,26 +63,34 @@ even meaningful.
 feature  odd/tasks/yolo-temp-scratch-rm.md      ← the file it read
 repo     /path/to/your-repo                     ← the repo it checked
 specs 7   tasks 2   log 10   risk item 2 ...    ← what it parsed
-sessions 1 root(s), 3520 observed run(s)        ← transcripts it loaded
+sessions 1 root(s), 3520 observed run(s)        ← transcripts it loaded (your count differs)
 ```
 
-### Check 0 — the document has a `## Specs` section
+### Check 0 — the document states requirements somewhere
 
-Some documents describe work without numbered requirements (`Goal`, `Why`,
-`Locked decisions`, `Tasks`). They are legitimate, but there is nothing to join:
-no `S#` exists to ask "was this verified?". The tool lists the tasks it found and
-says so, rather than printing an empty table:
+A requirement can be stated two ways, and the tool reads both:
+
+- a `## Specs` section with `S#` ids (as written by the author), or
+- a `## Acceptance criteria` (or `## Requirements`) list with no ids. Each
+  top-level item is numbered `S1…Sn` in document order and counted as derived.
+
+Some documents do neither: they describe work under `Goal`, `Why`, `Constraints`
+and `Tasks`. That is legitimate, but there is nothing to join, because no
+requirement exists to ask "was this verified?". The tool lists the tasks it found
+and says so, rather than printing an empty table:
 
 ```
 T#      commit   checks
 T1      —        bullet
 T2      —        bullet
 
-no ## Specs section: 24 task(s) parsed, 0 requirements to join.
+no ## Specs section: 2 task(s) parsed, 0 requirements to join.
 ```
 
-If you want per-requirement evidence from such a project, the document needs
-`S#` ids. That is a documentation decision, not a tool limitation.
+The wording says `## Specs` because that is the usual heading; it also appears
+for a document with no `## Acceptance criteria`. If you want per-requirement
+evidence from such a project, the document needs one of the two forms above. That
+is a documentation decision, not a tool limitation.
 
 ### Check 1 — `specs` and `tasks` are not zero
 
@@ -171,7 +180,7 @@ node trace.mjs --doc odd/tasks/x.md || echo "could not read that document"
 ## 5. The other entry points
 
 ```bash
-node --test tests/*.test.mjs                                   # 35 checks
+npm test                                                       # the test suite
 node corpus-audit.mjs <odd/tasks> <repo>                       # whole-corpus audit
 node coverage-report.mjs <odd/tasks>                           # parser coverage per directory
 node diagnose.mjs <odd/tasks>                                  # which documents resist, and why
