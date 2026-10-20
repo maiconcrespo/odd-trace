@@ -125,6 +125,22 @@ counted as one.
   happens in worktrees and the document is written afterwards.
 - **A rate for other projects.** One corpus.
 
+## This repository's own history
+
+odd-trace keeps its evidence in commit messages, not in ODD feature documents.
+It has zero `odd/tasks/` documents, so it cannot audit its own work: the corpus
+tools report `feature-docs directory not found`, and its own correction commits —
+which do describe what was fixed and why — cannot be joined from `S#` to commit to
+check.
+
+That is a real limit, not an exception to argue away. A feature document written
+after the fact would be testimony, not a contract, and this project's point is
+that evidence is not manufactured. The next work should start with
+`odd/tasks/<name>.md` rather than back-fill one.
+
+It is also the clearest demonstration the project has: the failure it measures in
+other people's documents happens to its own.
+
 ## Corrections to earlier claims
 
 Earlier versions of this repository, and an upstream issue, stated figures and
