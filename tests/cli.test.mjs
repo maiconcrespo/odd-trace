@@ -87,3 +87,29 @@ test("the CLI writes nothing", () => {
 	const after = spawnSync("git", ["-C", HERE, "status", "--porcelain", ".."], { encoding: "utf8" }).stdout;
 	assert.equal(after, before);
 });
+
+test("a document with tasks but no specs lists the tasks instead of an empty table", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-nospecs-"));
+	try {
+		const doc = join(dir, "feature.md");
+		writeFileSync(
+			doc,
+			`# Feature: x
+
+## Tasks
+
+- [x] **T1 — Scaffold.** did it
+- [x] **T2 — Build.** did it
+
+## Log
+`,
+		);
+		const r = run(["--doc", doc, "--repo", REPO]);
+		assert.equal(r.status, 0);
+		assert.match(r.stdout, /no ## Specs section: 2 task\(s\) parsed/);
+		assert.match(r.stdout, /T1/);
+		assert.doesNotMatch(r.stdout, /S#/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});

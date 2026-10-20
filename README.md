@@ -132,7 +132,7 @@ spec coverage: 0/7 specs have an observed passing check
 | `diagnose.mjs` | which documents still resist the parser, and the offending line |
 
 ```bash
-node --test tests/*.test.mjs          # 29 pass
+node --test tests/*.test.mjs          # 30 pass
 node corpus-audit.mjs <dir> <repo>    # evidence-chain coverage
 node coverage-report.mjs <dir>        # parser coverage
 ```

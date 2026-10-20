@@ -65,6 +65,24 @@ specs 7   tasks 2   log 10   risk item 2 ...    ← what it parsed
 sessions 1 root(s), 3520 observed run(s)        ← transcripts it loaded
 ```
 
+### Check 0 — the document has a `## Specs` section
+
+Some documents describe work without numbered requirements (`Goal`, `Why`,
+`Locked decisions`, `Tasks`). They are legitimate, but there is nothing to join:
+no `S#` exists to ask "was this verified?". The tool lists the tasks it found and
+says so, rather than printing an empty table:
+
+```
+T#      commit   checks
+T1      —        bullet
+T2      —        bullet
+
+no ## Specs section: 24 task(s) parsed, 0 requirements to join.
+```
+
+If you want per-requirement evidence from such a project, the document needs
+`S#` ids. That is a documentation decision, not a tool limitation.
+
 ### Check 1 — `specs` and `tasks` are not zero
 
 If either is `0`, the document is not in a shape the parser understands and
@@ -153,7 +171,7 @@ node trace.mjs --doc odd/tasks/x.md || echo "could not read that document"
 ## 5. The other entry points
 
 ```bash
-node --test tests/*.test.mjs                                   # 29 checks
+node --test tests/*.test.mjs                                   # 30 checks
 node corpus-audit.mjs <odd/tasks> <repo>                       # whole-corpus audit
 node coverage-report.mjs <odd/tasks>                           # parser coverage per directory
 node diagnose.mjs <odd/tasks>                                  # which documents resist, and why

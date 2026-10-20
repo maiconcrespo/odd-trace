@@ -228,6 +228,23 @@ for (const p of payloads) {
 	);
 	console.log(`sessions ${sessionRoots.length} root(s), ${runs.length} observed run(s)`);
 	console.log();
+	// A document without `## Specs` is not empty: it names work but no numbered
+// requirements. Report the tasks instead of an empty table, because an empty
+// table reads as "nothing to report".
+if (!p.parsed.specs.length && p.parsed.tasks.length) {
+		console.log(`${pad("T#", 8)}${pad("commit", 9)}checks`);
+		console.log("-".repeat(60));
+		for (const t of p.parsed.tasks) {
+			const commits = t.commits.length ? t.commits.map((c) => c.slice(0, 7)).join(",") : "\u2014";
+			console.log(`${pad(t.id, 8)}${pad(commits, 9)}${t.shape}`);
+		}
+		console.log(
+			`\nno ## Specs section: ${p.parsed.tasks.length} task(s) parsed, 0 requirements to join.`,
+		);
+		console.log("  this document describes work without numbered specs, so per-requirement evidence is not expressible.");
+		continue;
+	}
+
 	console.log(`${pad("S#", 5)}${pad("T#", 5)}${pad("commit", 9)}${pad("check", 30)}${pad("code", 7)}verdict`);
 	console.log("-".repeat(100));
 	for (const r of p.rows) {
