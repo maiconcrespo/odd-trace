@@ -260,3 +260,113 @@ test("review inventory never invents a lineage for a task", () => {
 	const unavailable = attachReview(rows, { error: "boom" });
 	assert.equal(unavailable[0].review, "unavailable");
 });
+
+// ------------------------------------------- real-world shapes from the corpus
+// Every case below is copied from an actual document in
+// gentle-shell/odd/tasks. The corpus is the specification.
+
+test("spec ids appear with and without bold, bullets, tags and a leading hash", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** bold, plain
+- **S2 — Em dash title.** body
+S3 — no bullet, no bold
+- S4 (user, verbatim): "quote"
+- S#5 hash inside the id
+1. S6 ordered list
+`);
+	assert.deepEqual(
+		parsed.specs.map((s) => s.id),
+		["S1", "S2", "S3", "S4", "S5", "S6"],
+	);
+});
+
+test("a spec id mentioned mid-sentence is not a definition", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** the real one, which references S9 and S12 inline.
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1"]);
+});
+
+test("task rows parse as table, bullet and prose in one document", () => {
+	const parsed = parseDoc(`## Tasks
+
+| ID | Specs | Route | Commit |
+|----|-------|-------|--------|
+| T1 | S1-S2 | inline | \`250cec03\`\` |
+
+- T2 [x] S3 — work. Route: inline. Commit: \`608d90da\`
+- [x] **SN-3 — Scheduler** | S4/S5 | route: delegated | Commit LOCAL \`0229cb\`
+
+T4 · S6,S7 · inline · **DONE** — prose row
+`);
+	assert.deepEqual(
+		parsed.tasks.map((t) => t.id),
+		["T1", "T2", "SN3", "T4"],
+	);
+	assert.deepEqual(parsed.tasks[0].specIds, ["S1", "S2"]);
+	assert.deepEqual(parsed.tasks[1].specIds, ["S3"]);
+	assert.deepEqual(parsed.tasks[2].specIds, ["S4", "S5"]);
+	assert.deepEqual(parsed.tasks[3].specIds, ["S6", "S7"]);
+	assert.deepEqual(parsed.tasks[0].commits, ["250cec03"]);
+	assert.deepEqual(parsed.tasks[1].commits, ["608d90da"]);
+});
+
+test("a table whose id column is named Unit and holds phases is readable", () => {
+	const parsed = parseDoc(`## Tasks
+
+| Unit | Intent | Candidate paths | Acceptance |
+|------|--------|-----------------|------------|
+| **N0** | plan, committed \`9282b002\` | docs | ok |
+| **N1a** | codec, committed \`b2bdee09\` | lib | ok |
+`);
+	assert.deepEqual(parsed.tasks.map((t) => t.id), ["N0", "N1a"]);
+	assert.deepEqual(parsed.tasks[0].commits, ["9282b002"]);
+});
+
+test("a spec range expands, but an absurd range does not", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+## Tasks
+
+| ID | Specs | Commit |
+|----|-------|--------|
+| T1 | S1-S4 | abc1234 |
+| T2 | S1-S900 | abc1234 |
+`);
+	assert.deepEqual(parsed.tasks[0].specIds, ["S1", "S2", "S3", "S4"]);
+	assert.deepEqual(parsed.tasks[1].specIds, ["S1", "S900"]);
+});
+
+test("section detection tolerates a horizontal rule as the separator", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+---
+
+## Tasks
+
+| ID | Specs | Commit |
+|----|-------|--------|
+| T1 | S1 | abc1234 |
+`);
+	assert.equal(parsed.specs.length, 1);
+	assert.equal(parsed.tasks.length, 1);
+});
+
+test("a document with tasks but no commit reference says so instead of guessing", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+## Tasks
+
+- [x] T1 S1 did the thing, no hash anywhere
+`);
+	const rows = buildRows({ parsed, commitFacts: new Map(), runs: [], repoRoot: REPO });
+	assert.equal(rows[0].verdict, "NO COMMIT IN DOC");
+});
