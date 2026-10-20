@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gentle-trace — READ ONLY.
+// odd-trace — READ ONLY.
 //
 // Joins what already exists and is currently joined only by hand:
 //   S# (spec) -> T# (task) -> commit -> observed check run -> review authority
@@ -64,7 +64,7 @@ const git = (...a) => {
 // Fail loud and early. A missing document or a non-repository must never
 // produce an empty table that looks like a clean answer.
 function fail(message, hint) {
-	console.error(`gentle-trace: ${message}`);
+	console.error(`odd-trace: ${message}`);
 	if (hint) console.error(`  ${hint}`);
 	process.exit(2);
 }
@@ -207,7 +207,7 @@ for (const docPath of opt.docs) {
 const unreadable = payloads.filter((p) => !p.parsed.specs.length && !p.parsed.tasks.length);
 for (const p of unreadable) {
 	console.error(
-		`gentle-trace: no specs and no tasks parsed from ${p.doc}\n` +
+		`odd-trace: no specs and no tasks parsed from ${p.doc}\n` +
 			"  sections present: " +
 			JSON.stringify(p.parsed.sections) +
 			"\n  run `node diagnose.mjs <dir>` to see the shapes this document uses",

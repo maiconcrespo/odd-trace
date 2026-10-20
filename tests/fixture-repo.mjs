@@ -20,7 +20,7 @@ export const TEST_FILE = "tests/widget.test.js";
  * Returns the repository path plus the commit facts the analysis needs.
  */
 export function createFixtureRepo() {
-	const root = mkdtempSync(join(tmpdir(), "gentle-trace-repo-"));
+	const root = mkdtempSync(join(tmpdir(), "odd-trace-repo-"));
 	const git = (...args) =>
 		execFileSync("git", ["-C", root, ...args], {
 			encoding: "utf8",
@@ -79,7 +79,7 @@ export function commitFactsFor(repo, { found = true } = {}) {
  *   stale    - a passing run dated before the commit
  */
 export function writeTranscript(repo, outcome) {
-	const dir = mkdtempSync(join(tmpdir(), "gentle-trace-sessions-"));
+	const dir = mkdtempSync(join(tmpdir(), "odd-trace-sessions-"));
 	const projectDir = join(dir, "--fixture--");
 	mkdirSync(projectDir, { recursive: true });
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Diagnostic helper for the gentle-trace prototype: for a given commit, show
+// Diagnostic helper for the odd-trace prototype: for a given commit, show
 // every transcript entry whose command mentions a test file the commit changed,
 // and why the prototype accepted or rejected it. Read-only.
 

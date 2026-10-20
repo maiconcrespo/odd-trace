@@ -1,5 +1,5 @@
 {
-  "name": "gentle-trace",
+  "name": "odd-trace",
   "version": "0.1.0",
   "description": "Read-only join over ODD evidence: S# -> T# -> commit -> observed check run -> review authority",
   "license": "MIT",
@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "bin": {
-    "gentle-trace": "./trace.mjs"
+    "odd-trace": "./trace.mjs"
   },
   "scripts": {
     "test": "node --test tests/*.test.mjs",

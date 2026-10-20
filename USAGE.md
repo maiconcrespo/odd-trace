@@ -1,6 +1,6 @@
-# How to use gentle-trace
+# How to use odd-trace
 
-`gentle-trace` is a **script you run by hand**, like `git` or `grep`. It is not
+`odd-trace` is a **script you run by hand**, like `git` or `grep`. It is not
 an extension, it has no TUI command, and nothing runs in the background. It
 reads files, prints a table, exits. It never writes.
 
@@ -14,7 +14,7 @@ The script is at `gentletest/trace.mjs` and has no hard-coded paths, so it works
 from anywhere:
 
 ```bash
-node /home/crespo/gentlemansystem/gentletest/trace.mjs --doc <file> [--repo <dir>]
+node /path/to/odd-trace/trace.mjs --doc <file> [--repo <dir>]
 ```
 
 `--repo` is the repository the feature document belongs to. **If you omit it,
@@ -22,8 +22,8 @@ the current directory is used.** So the natural workflow is: stand inside the
 repository you are auditing.
 
 ```bash
-cd /home/crespo/gentlemansystem/gentle-shell
-node /home/crespo/gentlemansystem/gentletest/trace.mjs --doc odd/tasks/yolo-temp-scratch-rm.md
+cd /path/to/your-repo
+node /path/to/odd-trace/trace.mjs --doc odd/tasks/<feature>.md
 ```
 
 That is the whole invocation. `--repo` is only needed when you run from
@@ -31,8 +31,8 @@ somewhere else:
 
 ```bash
 cd /tmp
-node .../trace.mjs --doc /home/crespo/gentlemansystem/gentle-shell/odd/tasks/x.md \
-                   --repo /home/crespo/gentlemansystem/gentle-shell
+node .../trace.mjs --doc /path/to/repo/odd/tasks/x.md \
+                   --repo /path/to/repo
 ```
 
 ### Which directory is which
@@ -60,7 +60,7 @@ even meaningful.
 
 ```
 feature  odd/tasks/yolo-temp-scratch-rm.md      ← the file it read
-repo     /home/crespo/.../gentle-shell          ← the repo it checked
+repo     /path/to/your-repo                     ← the repo it checked
 specs 7   tasks 2   log 10   risk item 2 ...    ← what it parsed
 sessions 1 root(s), 3520 observed run(s)        ← transcripts it loaded
 ```
@@ -89,7 +89,7 @@ If either is `0`, the document is not in a shape the parser understands and
 everything below is meaningless. The CLI now exits with status 3 and says so:
 
 ```
-gentle-trace: no specs and no tasks parsed from odd/tasks/x.md
+odd-trace: no specs and no tasks parsed from odd/tasks/x.md
   sections present: {"specs":false,"tasks":true,"log":false}
 ```
 
@@ -182,7 +182,7 @@ node probe.mjs <commit> <repo>                                 # why one commit'
 
 ## 6. Explaining it to someone else
 
-> gentle-trace cross-references three things that already exist: the specs in an
+> odd-trace cross-references three things that already exist: the specs in an
 > ODD feature document, the commits that document cites, and the test runs
 > recorded in Pi's transcripts. For each requirement it reports whether there is
 > observable evidence that it was tested, in which commit, with what result.

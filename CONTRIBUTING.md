@@ -4,7 +4,7 @@ Everything here runs on Node 22+ with **no dependencies and no install step**.
 
 ```bash
 git clone <this repo>
-cd gentle-trace
+cd odd-trace
 npm test
 ```
 
@@ -19,7 +19,7 @@ or your Pi sessions.
 
 ```bash
 cd /path/to/a/repo-with-odd/tasks
-node /path/to/gentle-trace/trace.mjs --doc odd/tasks/<name>.md
+node /path/to/odd-trace/trace.mjs --doc odd/tasks/<name>.md
 ```
 
 No flags are needed when you are standing in the repository. See

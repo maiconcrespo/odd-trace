@@ -1,4 +1,4 @@
-# gentle-trace
+# odd-trace
 
 A read-only join over evidence that gentle-shell already produces but never
 connects:
@@ -29,7 +29,7 @@ If that line is missing, wrong, or the commit is gone, nobody can tell. When a
 feature is resumed weeks later, or when a reviewer asks "was this requirement
 actually verified?", the answer is markdown archaeology plus trust.
 
-`gentle-trace` answers it in one command, and refuses to answer when the
+`odd-trace` answers it in one command, and refuses to answer when the
 evidence is not there.
 
 ---
@@ -63,7 +63,7 @@ Each of these was a real false positive found while building it:
 ## Try it
 
 ```bash
-git clone <repo> && cd gentle-trace
+git clone <repo> && cd odd-trace
 npm test        # 35 pass, no dependencies, no install step
 ```
 
