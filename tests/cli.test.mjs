@@ -140,3 +140,45 @@ test("an audit on a directory that does not exist fails with exit 2", () => {
 	assert.equal(r.status, 2);
 	assert.match(r.stderr, /directory not found/);
 });
+
+// ------------------------------------------------ audit units (second audit)
+// A commit cited by two documents is two references but one commit. The audit
+// once printed a single number without saying which unit it counted, and the
+// published figures drifted by one between two measurements of the same corpus.
+test("the audit reports references per document and distinct commits separately", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-units-"));
+	try {
+		const doc = (name) =>
+			writeFileSync(
+				join(dir, name),
+				`## Specs\n\n- **S1** x\n\n## Tasks\n\n| ID | Specs | Commit |\n|----|-------|--------|\n| T1 | S1 | ${FIXTURE.short} |\n`,
+			);
+		doc("a.md");
+		doc("b.md");
+		const r = spawnSync(process.execPath, [join(HERE, "..", "corpus-audit.mjs"), dir, REPO], { encoding: "utf8" });
+		assert.equal(r.status, 0);
+		assert.match(r.stdout, /commit references \(per document\)\s+2/);
+		assert.match(r.stdout, /distinct commits\s+1/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("an unresolvable commit is counted once as a distinct commit however many documents cite it", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-units-missing-"));
+	try {
+		const doc = (name) =>
+			writeFileSync(
+				join(dir, name),
+				`## Specs\n\n- **S1** x\n\n## Tasks\n\n| ID | Specs | Commit |\n|----|-------|--------|\n| T1 | S1 | deadbee1 |\n`,
+			);
+		doc("a.md");
+		doc("b.md");
+		const r = spawnSync(process.execPath, [join(HERE, "..", "corpus-audit.mjs"), dir, REPO], { encoding: "utf8" });
+		assert.equal(r.status, 0);
+		const missing = [...r.stdout.matchAll(/missing from this clone\s+(\d+)/g)].map((m) => Number(m[1]));
+		assert.deepEqual(missing, [2, 1]);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});

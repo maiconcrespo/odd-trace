@@ -50,6 +50,8 @@ const totals = {
 	docsWithoutCommitColumn: 0,
 };
 const missingByDoc = [];
+const distinctRefs = new Set();
+const distinctMissing = new Set();
 
 for (const f of files) {
 	const parsed = parseDoc(readFileSync(join(dir, f), "utf8"));
@@ -68,6 +70,8 @@ for (const f of files) {
 	const missing = [];
 	for (const c of refs) {
 		totals.commitsReferenced++;
+		distinctRefs.add(c);
+		if (!exists(c)) distinctMissing.add(c);
 		if (exists(c)) {
 			present++;
 			totals.commitsPresent++;
@@ -90,9 +94,13 @@ console.log(`joinable (specs and tasks) ${totals.joinable}`);
 console.log(`specs parsed               ${totals.specs}`);
 console.log(`tasks parsed               ${totals.tasks}`);
 console.log();
-console.log(`commits referenced         ${totals.commitsReferenced}`);
+// Two units, named explicitly: a commit cited by two documents is two references
+// but one commit. Reporting only one of them without saying which was ambiguous.
+console.log(`commit references (per document)  ${totals.commitsReferenced}`);
 console.log(`  present in this clone    ${totals.commitsPresent}`);
 console.log(`  missing from this clone  ${totals.commitsMissing}`);
+console.log(`distinct commits                  ${distinctRefs.size}`);
+console.log(`  missing from this clone  ${distinctMissing.size}`);
 console.log(`documents whose commits all resolve      ${totals.docsWithAllCommitsPresent}`);
 console.log(`documents with at least one missing      ${totals.docsWithAnyCommitMissing}`);
 console.log(`documents with tasks but no commit ref   ${totals.docsWithoutCommitColumn}`);
