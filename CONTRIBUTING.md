@@ -34,6 +34,16 @@ node corpus-audit.mjs /path/to/repo/odd/tasks /path/to/repo
 It prints how many documents the join can read, how many commits they reference,
 and how many of those commits actually exist in that clone.
 
+## Why the numbers matter
+
+`corpus-audit.mjs` measured 144 feature documents in a real repository and found
+that 99 of the 184 commits they cite do not exist in the clone. That measurement
+is filed upstream as
+[gentle-shell#2408](https://github.com/Gentleman-Programming/gentle-shell/issues/2408),
+together with the minimal document contract that would make the join complete.
+If you run the audit on your own project and get a different picture, that is
+worth reporting too.
+
 ## What to report
 
 The most useful report is a document the parser gets wrong. Run:

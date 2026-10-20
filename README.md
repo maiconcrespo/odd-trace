@@ -233,6 +233,9 @@ native ledger — see `gentle-shell#554`.
 - **`gentle-shell#2366`** and **`#2369`** both note that harness effects are
   asserted rather than measured. `corpus-audit.mjs` is a small, concrete
   measurement of one such claim.
+- **`gentle-shell#2408`** is the report these numbers produced: the minimal
+  document contract (a commit and a check per task row) and the three findings
+  above, filed upstream with the reproduction.
 
 ## Status
 
