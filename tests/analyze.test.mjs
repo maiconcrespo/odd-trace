@@ -533,3 +533,45 @@ test("explicit S# ids in the same section are not renumbered", () => {
 	assert.deepEqual(parsed.specs.map((s) => s.id), ["S4", "S9"]);
 	assert.equal(parsed.specs[0].derived, undefined);
 });
+
+// ------------------------------- id collisions inside one section (audit 4)
+// A section can mix explicit ids with unnumbered items. Numbering the latter
+// from 1 produced a second "S1" next to the author's "S1": two requirements
+// answering to one id, which makes every join keyed on the id wrong.
+test("an unnumbered item never takes an id the author already used", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- **S1** explicit one
+- an item with no id
+- another with no id
+`);
+	const ids = parsed.specs.map((s) => s.id);
+	assert.equal(new Set(ids).size, ids.length, `duplicate ids: ${ids.join(",")}`);
+	assert.equal(ids[0], "S1");
+	assert.equal(parsed.specs[0].derived, undefined);
+});
+
+test("derived ids skip past explicit ones wherever the explicit ones appear", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- first with no id
+- **S2** explicit, second position
+- third with no id
+`);
+	const ids = parsed.specs.map((s) => s.id);
+	assert.equal(new Set(ids).size, ids.length, `duplicate ids: ${ids.join(",")}`);
+	assert.deepEqual(
+		parsed.specs.filter((s) => s.derived).map((s) => s.text),
+		["first with no id", "third with no id"],
+	);
+});
+
+test("a section with no explicit ids is still numbered from S1", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- one
+- two
+- three
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2", "S3"]);
+});
