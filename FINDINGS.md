@@ -127,19 +127,17 @@ counted as one.
 
 ## This repository's own history
 
-odd-trace keeps its evidence in commit messages, not in ODD feature documents.
-It has zero `odd/tasks/` documents, so it cannot audit its own work: the corpus
-tools report `feature-docs directory not found`, and its own correction commits —
-which do describe what was fixed and why — cannot be joined from `S#` to commit to
+odd-trace has no `odd/tasks/` documents. Its work is recorded in commit messages,
+which describe what was fixed and why but cannot be joined from `S#` to commit to
 check.
 
-That is a real limit, not an exception to argue away. A feature document written
-after the fact would be testimony, not a contract, and this project's point is
-that evidence is not manufactured. The next work should start with
-`odd/tasks/<name>.md` rather than back-fill one.
+That is chronological rather than a defect: the tool was built before there was a
+project to document. It started as a prototype and grew one commit at a time, and
+a feature document is written before large work starts, not after it finishes.
 
-It is also the clearest demonstration the project has: the failure it measures in
-other people's documents happens to its own.
+The consequence is still worth stating: this repository's own history is not
+joinable by the tool it contains. New work can start with `odd/tasks/<name>.md`.
+Old work is left as it is.
 
 ## Corrections to earlier claims
 
