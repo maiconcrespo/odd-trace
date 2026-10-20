@@ -38,6 +38,8 @@ const files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
 const totals = {
 	docs: files.length,
 	withSpecs: 0,
+	specsAuthored: 0,
+	specsDerived: 0,
 	withTasks: 0,
 	joinable: 0,
 	specs: 0,
@@ -56,6 +58,7 @@ const distinctMissing = new Set();
 for (const f of files) {
 	const parsed = parseDoc(readFileSync(join(dir, f), "utf8"));
 	if (parsed.specs.length) totals.withSpecs++;
+	for (const sp of parsed.specs) sp.derived ? totals.specsDerived++ : totals.specsAuthored++;
 	if (parsed.tasks.length) totals.withTasks++;
 	if (parsed.specs.length && parsed.tasks.length) totals.joinable++;
 	totals.specs += parsed.specs.length;
@@ -88,10 +91,12 @@ for (const f of files) {
 }
 
 console.log(`documents                  ${totals.docs}`);
-console.log(`with ## Specs (S#)         ${totals.withSpecs}`);
+console.log(`documents with any parsed spec   ${totals.withSpecs}`);
 console.log(`with readable task rows    ${totals.withTasks}`);
 console.log(`joinable (specs and tasks) ${totals.joinable}`);
 console.log(`specs parsed               ${totals.specs}`);
+console.log(`  specs written by the author    ${totals.specsAuthored}`);
+console.log(`  specs derived from a list      ${totals.specsDerived}`);
 console.log(`tasks parsed               ${totals.tasks}`);
 console.log();
 // Two units, named explicitly: a commit cited by two documents is two references

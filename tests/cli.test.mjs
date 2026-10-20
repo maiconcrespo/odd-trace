@@ -182,3 +182,24 @@ test("an unresolvable commit is counted once as a distinct commit however many d
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
+
+// ------------------------------------- authored vs derived specs (audit 3)
+// "with ## Specs (S#)" printed 83 when only 46 documents have that heading: the
+// other 37 write requirements under "## Acceptance criteria" and the parser
+// numbers them. A label must say what it counts.
+test("the audit separates authored specs from derived ones", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-derived-"));
+	try {
+		writeFileSync(join(dir, "authored.md"), "## Specs\n\n- **S1** a\n- **S2** b\n");
+		writeFileSync(join(dir, "derived.md"), "## Acceptance criteria\n\n- first\n- second\n- third\n");
+		writeFileSync(join(dir, "none.md"), "# nothing here\n");
+		const r = spawnSync(process.execPath, [join(HERE, "..", "corpus-audit.mjs"), dir, REPO], { encoding: "utf8" });
+		assert.equal(r.status, 0);
+		assert.match(r.stdout, /documents with any parsed spec\s+2/);
+		assert.match(r.stdout, /specs written by the author\s+2/);
+		assert.match(r.stdout, /specs derived from a list\s+3/);
+		assert.doesNotMatch(r.stdout, /with ## Specs/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
