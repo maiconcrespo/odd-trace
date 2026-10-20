@@ -171,7 +171,7 @@ node trace.mjs --doc odd/tasks/x.md || echo "could not read that document"
 ## 5. The other entry points
 
 ```bash
-node --test tests/*.test.mjs                                   # 30 checks
+node --test tests/*.test.mjs                                   # 35 checks
 node corpus-audit.mjs <odd/tasks> <repo>                       # whole-corpus audit
 node coverage-report.mjs <odd/tasks>                           # parser coverage per directory
 node diagnose.mjs <odd/tasks>                                  # which documents resist, and why
