@@ -319,7 +319,33 @@ test("a spec range expands, but an absurd range does not", () => {
 	assert.deepEqual(parsed.tasks[1].specIds, ["S1", "S900"]);
 });
 
-test("section detection tolerates a horizontal rule as the separator", () => {
+// A "---" line does NOT end a section: only the next "## " heading does. An
+// earlier version of this test (and its commit message) claimed otherwise and
+// passed for the wrong reason, because the following "## Tasks" heading ended the
+// section anyway. This version builds a case where only a real "---" cut could
+// change the result, and pins what the parser actually does. No document in the
+// measured corpus contains such a line, so the behaviour is documented, not
+// extended.
+test("a horizontal rule does not end a section; only the next heading does", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** before the rule
+
+---
+
+- **S2** after the rule, still inside Specs
+
+## Tasks
+
+| ID | Specs | Commit |
+|----|-------|--------|
+| T1 | S1 | abc1234 |
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2"]);
+	assert.equal(parsed.tasks.length, 1);
+});
+
+test("a horizontal rule between two sections does not disturb either of them", () => {
 	const parsed = parseDoc(`## Specs
 
 - **S1** a
