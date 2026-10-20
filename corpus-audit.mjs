@@ -7,7 +7,7 @@
 // documents can the join follow to a commit that exists in this clone".
 
 import { execFileSync } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, statSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseDoc } from "./lib/analyze.mjs";
 
@@ -29,6 +29,11 @@ const git = (...a) => {
 
 const exists = (c) => git("cat-file", "-e", `${c}^{commit}`) !== null;
 
+if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+	console.error(`feature-docs directory not found: ${dir}`);
+	console.error("  this project may have no odd/tasks directory at all");
+	process.exit(2);
+}
 const files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
 const totals = {
 	docs: files.length,

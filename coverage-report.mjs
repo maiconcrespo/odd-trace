@@ -4,7 +4,7 @@
 // actually read? A document with specs but no readable tasks contributes
 // nothing, and that is a finding about the corpus, not about the parser.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, statSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseDoc } from "./lib/analyze.mjs";
 
@@ -14,6 +14,11 @@ if (!dirArg) {
 	process.exit(2);
 }
 const dir = resolve(dirArg);
+if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+	console.error(`feature-docs directory not found: ${dir}`);
+	console.error("  this project may have no odd/tasks directory at all");
+	process.exit(2);
+}
 const files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
 
 let docs = 0;

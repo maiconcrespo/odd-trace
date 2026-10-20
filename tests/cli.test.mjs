@@ -113,3 +113,11 @@ test("a document with tasks but no specs lists the tasks instead of an empty tab
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
+
+test("an audit on a directory that does not exist fails with exit 2", () => {
+	const r = spawnSync(process.execPath, [join(HERE, "..", "corpus-audit.mjs"), "/nonexistent/odd/tasks", REPO], {
+		encoding: "utf8",
+	});
+	assert.equal(r.status, 2);
+	assert.match(r.stderr, /directory not found/);
+});

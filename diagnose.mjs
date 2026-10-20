@@ -2,11 +2,16 @@
 // Read-only. Prints the first spec-looking line of each document the parser
 // finds no specs in, so the gap is visible instead of guessed.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, statSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseSpecs, parseTasks } from "./lib/analyze.mjs";
 
 const dir = resolve(process.argv[2] ?? ".");
+if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+	console.error(`feature-docs directory not found: ${dir}`);
+	console.error("  this project may have no odd/tasks directory at all");
+	process.exit(2);
+}
 const files = readdirSync(dir).filter((f) => f.endsWith(".md")).sort();
 
 let hasSpecSection = 0;

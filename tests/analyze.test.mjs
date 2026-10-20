@@ -370,3 +370,66 @@ test("a document with tasks but no commit reference says so instead of guessing"
 	const rows = buildRows({ parsed, commitFacts: new Map(), runs: [], repoRoot: REPO });
 	assert.equal(rows[0].verdict, "NO COMMIT IN DOC");
 });
+
+// ------------------------------------- requirements without S# ids (real repos)
+test("## Acceptance criteria becomes numbered specs", () => {
+	const parsed = parseDoc(`# Feature
+
+## Acceptance criteria
+
+1. \`tool transcribe <file>\` prints the transcript to stdout.
+2. \`--clean\` removes filler words and reports every removal.
+3. No system CUDA install required.
+
+## Tasks
+
+| ID | Task | Status |
+| --- | --- | --- |
+| T1 | Scaffold | done |
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2", "S3"]);
+	assert.equal(parsed.specs[0].derived, true);
+	assert.match(parsed.specs[0].text, /prints the transcript/);
+});
+
+test("## Specs wins over ## Acceptance criteria when both exist", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** explicit id
+
+## Acceptance criteria
+
+1. numbered but secondary
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1"]);
+	assert.equal(parsed.specs[0].derived, undefined);
+});
+
+test("## Status checkboxes become tasks when ## Tasks is absent", () => {
+	const parsed = parseDoc(`# Project
+
+## Status
+
+- [x] 1. Scaffold Topcoat + SQLx
+- [x] 2. Data model
+- [ ] 3. Backup to Drive
+`);
+	assert.deepEqual(parsed.tasks.map((t) => t.id), ["T1", "T2", "T3"]);
+	assert.equal(parsed.tasks[0].shape, "status");
+	assert.equal(parsed.tasks[0].status, "done");
+});
+
+test("## Tasks wins over ## Status when both exist", () => {
+	const parsed = parseDoc(`## Tasks
+
+| ID | Specs | Commit |
+|----|-------|--------|
+| T1 | S1 | abc1234 |
+
+## Status
+
+- [x] 1. something else
+`);
+	assert.deepEqual(parsed.tasks.map((t) => t.id), ["T1"]);
+	assert.equal(parsed.tasks[0].shape, "table");
+});
