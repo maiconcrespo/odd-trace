@@ -475,3 +475,61 @@ test("abbreviated shas of 7 to 12 characters and full 40-character shas are kept
 test("a short all-digit sha is still a sha", () => {
 	assert.deepEqual(commitsOf("committed 1234567"), ["1234567"]);
 });
+
+// ------------------------------------- acceptance criteria as bullets (audit 3)
+// 34 of the 37 documents in the corpus that write requirements under
+// "## Acceptance criteria" use bullets or checkboxes, not "1." numbering. Only
+// numbered lists were read, so the headline "documents with specs" understated.
+test("bulleted acceptance criteria become numbered specs", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- The Dot stays above normal windows.
+- The panel keeps keyboard focus.
+- Nothing is written to disk.
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2", "S3"]);
+	assert.equal(parsed.specs[0].derived, true);
+	assert.match(parsed.specs[1].text, /keyboard focus/);
+});
+
+test("checkbox acceptance criteria are specs, checked or not", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- [x] first criterion
+- [ ] second criterion
+* third with an asterisk bullet
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2", "S3"]);
+	assert.doesNotMatch(parsed.specs[0].text, /^\[/);
+});
+
+test("a wrapped continuation line is not a new criterion", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- first criterion that
+  continues on the next line
+- second criterion
+`);
+	assert.equal(parsed.specs.length, 2);
+});
+
+test("an indented sub-bullet is not a separate criterion", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- parent criterion
+  - detail under it
+  - another detail
+- second parent
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2"]);
+});
+
+test("explicit S# ids in the same section are not renumbered", () => {
+	const parsed = parseDoc(`## Acceptance criteria
+
+- **S4** an id the author chose
+- **S9** another
+`);
+	assert.deepEqual(parsed.specs.map((s) => s.id), ["S4", "S9"]);
+	assert.equal(parsed.specs[0].derived, undefined);
+});
