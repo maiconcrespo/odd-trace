@@ -62,9 +62,17 @@ Each of these was a real false positive found while building it:
 
 ## Usage
 
+**Quick start:** stand inside the repository and run one command — see
+[`USAGE.md`](USAGE.md) for the full workflow, what to look at first, and how to
+read every verdict.
+
 ```bash
-# one feature document
-node trace.mjs --doc odd/tasks/<feature>.md --repo .
+# one feature document (repo defaults to the current directory)
+cd /path/to/repo
+node /path/to/gentletest/trace.mjs --doc odd/tasks/<feature>.md
+
+# explicit repo, from anywhere
+node trace.mjs --doc odd/tasks/<feature>.md --repo /path/to/repo
 
 # several documents at once
 node trace.mjs --doc a.md --doc b.md --repo .
@@ -115,14 +123,16 @@ spec coverage: 0/7 specs have an observed passing check
 |---|---|
 | `trace.mjs` | the CLI |
 | `lib/analyze.mjs` | pure analysis core — no I/O, so tests exercise the shipped path |
-| `tests/analyze.test.mjs` | 23 tests |
+| `tests/analyze.test.mjs` | 23 analysis tests |
+| `tests/cli.test.mjs` | 6 CLI tests: bad usage, exit codes, JSON, zero writes |
+| `USAGE.md` | the workflow: where to stand, what to read first, every verdict |
 | `probe.mjs` | explain why one commit's transcript entries were accepted or rejected |
 | `coverage-report.mjs` | how many documents in a directory the join can read |
 | `corpus-audit.mjs` | how much of the evidence chain resolves in this clone |
 | `diagnose.mjs` | which documents still resist the parser, and the offending line |
 
 ```bash
-node --test tests/*.test.mjs          # 23 pass
+node --test tests/*.test.mjs          # 29 pass
 node corpus-audit.mjs <dir> <repo>    # evidence-chain coverage
 node coverage-report.mjs <dir>        # parser coverage
 ```

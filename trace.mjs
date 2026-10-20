@@ -60,6 +60,31 @@ const git = (...a) => {
 	}
 };
 
+// ------------------------------------------------------------------- guards
+// Fail loud and early. A missing document or a non-repository must never
+// produce an empty table that looks like a clean answer.
+function fail(message, hint) {
+	console.error(`gentle-trace: ${message}`);
+	if (hint) console.error(`  ${hint}`);
+	process.exit(2);
+}
+
+if (!existsSync(repo) || !statSync(repo).isDirectory()) {
+	fail(`--repo is not a directory: ${repo}`, "pass --repo <path-to-repository>");
+}
+if (git("rev-parse", "--git-dir") === null) {
+	fail(`--repo is not a git repository: ${repo}`, "run from inside the repository, or pass --repo <path>");
+}
+for (const docPath of opt.docs) {
+	if (!existsSync(docPath)) {
+		fail(`feature document not found: ${docPath}`, "pass the path to an ODD feature document (odd/tasks/<name>.md)");
+	}
+	if (!statSync(docPath).isFile()) {
+		fail(`--doc is not a file: ${docPath}`, "pass a single feature document, not a directory");
+	}
+}
+
+
 // --------------------------------------------------------------- transcripts
 function collectRuns(dir) {
 	const runs = [];
@@ -176,6 +201,19 @@ for (const docPath of opt.docs) {
 	const cov = coverage(rows);
 	payloads.push({ doc: docPath, parsed, rows, coverage: cov, inventory });
 }
+
+// A document the parser cannot read must say so. An empty table reads as
+// "nothing to report", which is indistinguishable from a clean result.
+const unreadable = payloads.filter((p) => !p.parsed.specs.length && !p.parsed.tasks.length);
+for (const p of unreadable) {
+	console.error(
+		`gentle-trace: no specs and no tasks parsed from ${p.doc}\n` +
+			"  sections present: " +
+			JSON.stringify(p.parsed.sections) +
+			"\n  run `node diagnose.mjs <dir>` to see the shapes this document uses",
+	);
+}
+if (unreadable.length === payloads.length) process.exit(3);
 
 if (opt.json) {
 	console.log(JSON.stringify(payloads, null, 2));
