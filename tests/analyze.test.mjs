@@ -663,3 +663,99 @@ test("commits and specs are read from a suffixed Tasks section", () => {
 	assert.deepEqual(parsed.tasks[0].specIds, ["S1"]);
 	assert.deepEqual(parsed.tasks[0].commits, ["abc1234"]);
 });
+
+// ---------------------------------- the declared Check column is real evidence
+// A document that names the check in its own task row is the join this project
+// argues for. The parser used to ignore that column and went hunting through
+// transcripts instead, so the contract it proposed was not the one it read.
+test("a Check column in a task row is read and shown", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+## Tasks
+
+| ID | Specs | Commit | Check |
+|----|-------|--------|-------|
+| T1 | S1 | abc1234 | \`node --test tests/x.test.ts\` |
+`);
+	assert.equal(parsed.tasks[0].check, "node --test tests/x.test.ts");
+});
+
+test("a task that declares a check and has no matching run says the check never ran", () => {
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+## Tasks
+
+| ID | Specs | Commit | Check |
+|----|-------|--------|-------|
+| T1 | S1 | ${SHORT} | \`node --test tests/widget.test.ts\` |
+`);
+	const rows = buildRows({ parsed, commitFacts: commitFactsFor(REPO_FIXTURE), runs: [], repoRoot: REPO });
+	assert.equal(rows[0].verdict, "DECLARED CHECK NEVER RUN");
+	assert.equal(rows[0].check, "node --test tests/widget.test.ts");
+});
+
+test("a declared check is matched against a run that used it", () => {
+	const transcript = writeTranscript(REPO_FIXTURE, "pass");
+	process.on("exit", () => transcript.cleanup());
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+## Tasks
+
+| ID | Specs | Commit | Check |
+|----|-------|--------|-------|
+| T1 | S1 | ${SHORT} | \`node --test ${TEST_FILE}\` |
+`);
+	const rows = buildRows({
+		parsed,
+		commitFacts: commitFactsFor(REPO_FIXTURE),
+		runs: runsFrom(transcript.dir),
+		repoRoot: REPO,
+	});
+	assert.equal(rows[0].verdict, "observed pass");
+	assert.equal(rows[0].check, `node --test ${TEST_FILE}`);
+});
+
+test("a task with no Check column keeps inferring the check from the run", () => {
+	const transcript = writeTranscript(REPO_FIXTURE, "pass");
+	process.on("exit", () => transcript.cleanup());
+	const parsed = parseDoc(`## Specs
+
+- **S1** a
+
+## Tasks
+
+| ID | Specs | Commit |
+|----|-------|--------|
+| T1 | S1 | ${SHORT} |
+`);
+	const rows = buildRows({
+		parsed,
+		commitFacts: commitFactsFor(REPO_FIXTURE),
+		runs: runsFrom(transcript.dir),
+		repoRoot: REPO,
+	});
+	assert.equal(rows[0].verdict, "observed pass");
+	assert.equal(rows[0].check, "widget.test.js");
+});
+
+test("a bullet row can declare a check inline", () => {
+	const parsed = parseDoc(`## Tasks
+
+- T1 S1 abc1234 — work. Route: inline. Check: node --test tests/y.test.ts
+`);
+	assert.equal(parsed.tasks[0].check, "node --test tests/y.test.ts");
+});
+
+test("prose that merely mentions 'check:' is not a declared check", () => {
+	const parsed = parseDoc(`## Tasks
+
+- T1 S1 abc1234 — work. The consistency check: the sidebar keeps its order
+`);
+	assert.equal(parsed.tasks[0].check, "");
+});
