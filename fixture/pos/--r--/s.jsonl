@@ -1,3 +1,0 @@
-{"type":"session","version":3,"id":"fixture","timestamp":"2026-10-16T10:00:00.000Z","cwd":"/home/crespo/gentlemansystem/gentle-shell"}
-{"type":"message","timestamp":"2026-10-16T10:00:00.000Z","message":{"role":"assistant","content":[{"type":"toolCall","id":"c1","name":"bash","arguments":{"command":"cd /home/crespo/gentlemansystem/gentle-shell && node --experimental-strip-types --test tests/autonomous-guard.test.ts"}}]}}
-{"type":"message","timestamp":"2026-10-16T10:00:05.000Z","message":{"role":"toolResult","toolCallId":"c1","toolName":"bash","isError":false,"durationMs":5000,"content":[{"type":"text","text":"# tests 12\n# suites 3\n# pass 12\n# fail 0\n# cancelled 0\n# skipped 0"}]}}
