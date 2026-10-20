@@ -1,0 +1,33 @@
+{
+  "name": "gentle-trace",
+  "version": "0.1.0",
+  "description": "Read-only join over ODD evidence: S# -> T# -> commit -> observed check run -> review authority",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "gentle-trace": "./trace.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "trace": "node trace.mjs",
+    "audit": "node corpus-audit.mjs",
+    "coverage": "node coverage-report.mjs",
+    "diagnose": "node diagnose.mjs"
+  },
+  "files": [
+    "trace.mjs",
+    "lib/",
+    "fixture/",
+    "corpus-audit.mjs",
+    "coverage-report.mjs",
+    "diagnose.mjs",
+    "probe.mjs",
+    "README.md",
+    "USAGE.md",
+    "FORMAT.md"
+  ]
+}

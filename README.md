@@ -60,6 +60,17 @@ Each of these was a real false positive found while building it:
 
 ---
 
+## Try it
+
+```bash
+git clone <repo> && cd gentle-trace
+npm test        # 35 pass, no dependencies, no install step
+```
+
+The suite builds its own git repository and transcripts in a temp directory, so
+it passes on a machine that has never seen the author's checkout. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
 ## Usage
 
 **Quick start:** stand inside the repository and run one command — see

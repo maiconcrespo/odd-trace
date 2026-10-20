@@ -9,8 +9,8 @@
 
 | ID | Specs | Route | Commit |
 |----|-------|-------|--------|
-| T1 | S1 | inline | 6b8acd37f |
-| T2 | S2 | delegated | 6b8acd37f |
+| T1 | S1 | inline | COMMIT_PLACEHOLDER |
+| T2 | S2 | delegated | COMMIT_PLACEHOLDER |
 
 ## Log
 

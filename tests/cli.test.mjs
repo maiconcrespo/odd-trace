@@ -6,12 +6,27 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
+import { createFixtureRepo, writeTranscript } from "./fixture-repo.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CLI = join(HERE, "..", "trace.mjs");
-const REPO = "/home/crespo/gentlemansystem/gentle-shell";
+// Built at run time: the suite must not depend on the author's checkout.
+const FIXTURE = createFixtureRepo();
+process.on("exit", () => FIXTURE.cleanup());
+const REPO = FIXTURE.root;
+
+// The checked-in fixture cites COMMIT_PLACEHOLDER; a temp copy binds it to the
+// commit this run actually created.
+function materializeDoc() {
+	const dir = mkdtempSync(join(tmpdir(), "trace-doc-"));
+	const src = readFileSync(join(HERE, "..", "fixture", "feature.md"), "utf8");
+	const out = join(dir, "feature.md");
+	writeFileSync(out, src.replaceAll("COMMIT_PLACEHOLDER", FIXTURE.short));
+	process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+	return out;
+}
 
 const run = (args) =>
 	spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8", timeout: 60_000 });
@@ -51,13 +66,15 @@ test("a document with no parsable sections warns and exits 3", () => {
 });
 
 test("a readable document prints the table and exits 0", () => {
+	const transcript = writeTranscript(FIXTURE, "pass");
+	process.on("exit", () => transcript.cleanup());
 	const r = run([
 		"--doc",
-		join(HERE, "..", "fixture", "feature.md"),
+		materializeDoc(),
 		"--repo",
 		REPO,
 		"--sessions",
-		join(HERE, "..", "fixture", "pos"),
+		transcript.dir,
 	]);
 	assert.equal(r.status, 0);
 	assert.match(r.stdout, /observed pass/);
@@ -65,13 +82,15 @@ test("a readable document prints the table and exits 0", () => {
 });
 
 test("--json emits parsable JSON", () => {
+	const transcript = writeTranscript(FIXTURE, "pass");
+	process.on("exit", () => transcript.cleanup());
 	const r = run([
 		"--doc",
-		join(HERE, "..", "fixture", "feature.md"),
+		materializeDoc(),
 		"--repo",
 		REPO,
 		"--sessions",
-		join(HERE, "..", "fixture", "pos"),
+		transcript.dir,
 		"--json",
 	]);
 	assert.equal(r.status, 0);
@@ -83,7 +102,7 @@ test("--json emits parsable JSON", () => {
 
 test("the CLI writes nothing", () => {
 	const before = spawnSync("git", ["-C", HERE, "status", "--porcelain", ".."], { encoding: "utf8" }).stdout;
-	run(["--doc", join(HERE, "..", "fixture", "feature.md"), "--repo", REPO, "--sessions", join(HERE, "..", "fixture", "pos")]);
+	run(["--doc", materializeDoc(), "--repo", REPO, "--sessions", writeTranscript(FIXTURE, "pass").dir]);
 	const after = spawnSync("git", ["-C", HERE, "status", "--porcelain", ".."], { encoding: "utf8" }).stdout;
 	assert.equal(after, before);
 });

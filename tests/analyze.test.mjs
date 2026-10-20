@@ -13,78 +13,53 @@ import {
 	RUNNER_RE,
 	PIPELINE_RE,
 } from "../lib/analyze.mjs";
+import { createFixtureRepo, commitFactsFor, writeTranscript, runsFrom, TEST_FILE } from "./fixture-repo.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURES = join(HERE, "..", "fixture");
-const REPO = "/home/crespo/gentlemansystem/gentle-shell";
+// A repository this test owns, created at run time. The suite must pass on a
+// machine that has never seen the author's checkout.
+const REPO_FIXTURE = createFixtureRepo();
+process.on("exit", () => REPO_FIXTURE.cleanup());
+const REPO = REPO_FIXTURE.root;
+const SHORT = REPO_FIXTURE.short;
 
-const fixtureDoc = () => parseDoc(readFileSync(join(FIXTURES, "feature.md"), "utf8"));
+// The fixture document cites the commit this run created, not a commit from
+// the author's machine.
+const fixtureDoc = () =>
+	parseDoc(readFileSync(join(FIXTURES, "feature.md"), "utf8").replaceAll("COMMIT_PLACEHOLDER", SHORT));
 
 // Rebuild runs from a transcript file exactly as the CLI does.
-function runsFrom(dir) {
-	const text = readFileSync(dir, "utf8").trim().split("\n");
-	const calls = new Map();
-	const runs = [];
-	let cwd = null;
-	for (const line of text) {
-		const j = JSON.parse(line);
-		if (j.type === "session" && j.cwd) cwd = j.cwd;
-		if (j.type !== "message" || !j.message) continue;
-		const m = j.message;
-		if (m.role === "assistant" && Array.isArray(m.content)) {
-			for (const p of m.content) {
-				if (p.type === "toolCall") calls.set(p.id, { command: String(p.arguments?.command ?? ""), ts: j.timestamp });
-			}
-		} else if (m.role === "toolResult" && calls.has(m.toolCallId)) {
-			const c = calls.get(m.toolCallId);
-			runs.push({
-				command: c.command,
-				ts: j.timestamp,
-				isError: Boolean(m.isError),
-				text: Array.isArray(m.content) ? m.content.map((p) => p.text ?? "").join("") : String(m.content ?? ""),
-				cwd,
-			});
-		}
-	}
-	return runs;
-}
 
-// The commit the fixture references must exist in the repo for the join to run.
-const commitFacts = new Map([
-	[
-		"6b8acd37f",
-		{
-			found: true,
-			sha: "6b8acd37f0000000000000000000000000000abcd",
-			date: "2026-10-15T14:41:17+02:00",
-			testFiles: ["tests/autonomous-guard.test.ts"],
-			files: ["tests/autonomous-guard.test.ts"],
-		},
-	],
-]);
+const commitFacts = commitFactsFor(REPO_FIXTURE);
 
-const joinFixture = (fixtureDir) =>
-	buildRows({
+// Each control builds its own transcript, so the expected verdict depends on
+// the transcript and not on anything installed on this machine.
+const joinWith = (outcome) => {
+	const transcript = writeTranscript(REPO_FIXTURE, outcome);
+	process.on("exit", () => transcript.cleanup());
+	return buildRows({
 		parsed: fixtureDoc(),
 		commitFacts,
-		runs: runsFrom(join(FIXTURES, fixtureDir, "--r--", "s.jsonl")),
+		runs: runsFrom(transcript.dir),
 		repoRoot: REPO,
 	});
+};
 
 // ------------------------------------------------------------------ the join
 test("positive control: a real runner run after the commit is observed evidence", () => {
-	const rows = joinFixture("pos");
+	const rows = joinWith("pass");
 	assert.equal(rows.length, 2);
 	for (const r of rows) {
 		assert.equal(r.code, "0");
 		assert.equal(r.verdict, "observed pass");
-		assert.equal(r.check, "autonomous-guard.test.ts");
+		assert.equal(r.check, "widget.test.js");
 	}
 	assert.deepEqual(coverage(rows), { covered: 2, total: 2 });
 });
 
 test("a pipeline's exit status is never evidence, even when it exits 0", () => {
-	const rows = joinFixture("neg-pipeline");
+	const rows = joinWith("pipeline");
 	for (const r of rows) {
 		assert.equal(r.code, "piped");
 		assert.equal(r.verdict, "NOT EVIDENCE (pipeline)");
@@ -93,7 +68,7 @@ test("a pipeline's exit status is never evidence, even when it exits 0", () => {
 });
 
 test("a failing run is reported as failing, never rounded up", () => {
-	const rows = joinFixture("neg-fail");
+	const rows = joinWith("fail");
 	for (const r of rows) {
 		assert.equal(r.code, "fail");
 		assert.equal(r.verdict, "observed fail");
@@ -102,7 +77,7 @@ test("a failing run is reported as failing, never rounded up", () => {
 });
 
 test("a run performed before the commit cannot speak about the commit", () => {
-	const rows = joinFixture("neg-stale");
+	const rows = joinWith("stale");
 	for (const r of rows) {
 		assert.equal(r.verdict, "STALE CHECK");
 	}
@@ -143,25 +118,25 @@ test("node --test's real summary shape is parsed", () => {
 test("a filename mentioned by git diff is not a test run", () => {
 	const runs = [
 		{
-			command: "cd repo && git diff --stat tests/autonomous-guard.test.ts",
+			command: "cd repo && git diff --stat tests/widget.test.js",
 			ts: "2026-10-16T10:00:00Z",
 			cwd: REPO,
 			text: "",
 		},
 	];
-	assert.equal(selectRuns(runs, ["tests/autonomous-guard.test.ts"], REPO).length, 0);
+	assert.equal(selectRuns(runs, [TEST_FILE], REPO).length, 0);
 });
 
 test("a run in another checkout is rejected", () => {
 	const runs = [
 		{
-			command: "node --test tests/autonomous-guard.test.ts",
+			command: "node --test tests/widget.test.js",
 			ts: "2026-10-16T10:00:00Z",
 			cwd: "/home/other/worktree",
 			text: "",
 		},
 	];
-	assert.equal(selectRuns(runs, ["tests/autonomous-guard.test.ts"], REPO).length, 0);
+	assert.equal(selectRuns(runs, [TEST_FILE], REPO).length, 0);
 });
 
 test("runner detection covers the runners this project uses", () => {
