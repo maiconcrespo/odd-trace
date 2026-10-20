@@ -107,3 +107,27 @@ Related upstream work: `Gentleman-Programming/gentle-shell#554` asks for a
 human-readable audit trail per lineage and executable evidence per finding. It
 lives *inside* native authority. This prototype is complementary: it stays
 outside as a read-only join and never touches the ledger.
+
+## Polished (second revision)
+
+- **Multiple `--sessions` roots.** `--sessions a,b` or the flag repeated. A run
+  executed in a worktree with another `HOME` is real evidence; it just lives in
+  that `HOME`'s transcript directory, so the tool must be told where to look.
+- **Review dimension is honest about its limit.** The native ledger is
+  inventory-scoped: it records candidate trees and lineages, never ODD task
+  ids. `attachReview` matches a lineage to a commit only when an entry names
+  that commit, and otherwise says `no match` or `none recorded`. It never
+  invents a mapping.
+- **Analysis core is pure** (`lib/analyze.mjs`), so the tests exercise the same
+  code the CLI runs instead of a copy of it.
+- **16 tests**, `node --test tests/*.test.mjs`, covering the four controls plus
+  the classification, selection and parsing rules.
+
+## Limitations, stated plainly
+
+- The join is only as good as the `## Tasks` table. A document that omits a
+  commit for a task yields `NO COMMIT`; that is the correct answer, not a bug.
+- Transcripts are parsed for `bash`/`Bash` tool calls only. A check run through
+  another tool is invisible to this prototype.
+- Review authority can only be matched commit-to-lineage. Anything finer needs
+  the native ledger, which is `#554`'s job, not this tool's.
