@@ -203,3 +203,65 @@ test("the audit separates authored specs from derived ones", () => {
 		rmSync(dir, { recursive: true, force: true });
 	}
 });
+
+// ------------------------------------------ diagnose reports what it claims
+// The README says diagnose lists the documents that still resist the parser. It
+// only examined documents with a literal "## Specs" heading, so a document with
+// a "## Tasks" section that yields no tasks, or with neither section readable,
+// was never reported. The first thing a reader runs on a surprising result
+// should not skip the surprising documents.
+const diagnose = (dir) =>
+	spawnSync(process.execPath, [join(HERE, "..", "diagnose.mjs"), dir], { encoding: "utf8" });
+
+test("diagnose lists a document whose Tasks section yields no task", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-diag-"));
+	try {
+		writeFileSync(
+			join(dir, "opaque.md"),
+			"## Tasks\n\n- [x] SHELL-1: ids with a shape the parser does not recognise\n- [x] SHELL-2: same\n",
+		);
+		writeFileSync(join(dir, "fine.md"), "## Specs\n\n- **S1** a\n\n## Tasks\n\n- [x] T1 S1 abc1234\n");
+		const r = diagnose(dir);
+		assert.equal(r.status, 0);
+		assert.match(r.stdout, /opaque\.md/);
+		assert.doesNotMatch(r.stdout, /fine\.md/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("diagnose lists a document that yields neither specs nor tasks", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-diag-"));
+	try {
+		writeFileSync(join(dir, "prose.md"), "# Notes\n\n## Objective\n\nJust prose about the goal.\n\n## Progress\n\n- did things\n");
+		const r = diagnose(dir);
+		assert.equal(r.status, 0);
+		assert.match(r.stdout, /prose\.md/);
+		assert.match(r.stdout, /Objective/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("diagnose still reports a Specs section that yields no specs", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-diag-"));
+	try {
+		writeFileSync(join(dir, "empty-specs.md"), "## Specs\n\nnothing recognisable here\n\n## Tasks\n\n- [x] T1 abc1234\n");
+		const r = diagnose(dir);
+		assert.match(r.stdout, /empty-specs\.md/);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
+test("diagnose prints nothing to investigate when every document parses", () => {
+	const dir = mkdtempSync(join(tmpdir(), "trace-diag-"));
+	try {
+		writeFileSync(join(dir, "a.md"), "## Specs\n\n- **S1** a\n\n## Tasks\n\n- [x] T1 S1 abc1234\n");
+		const r = diagnose(dir);
+		assert.equal(r.status, 0);
+		assert.match(r.stdout, /nothing to investigate/i);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
