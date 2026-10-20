@@ -153,11 +153,14 @@ test("runner detection covers the runners this project uses", () => {
 	}
 });
 
-test("pipeline detection catches filters and redirections", () => {
-	for (const c of ["x | grep y", "x | head -3", "x > out.txt", "x | tee f"]) {
+test("pipeline detection catches pipes into filters, and only those", () => {
+	for (const c of ["x | grep y", "x | head -3", "x | tee f", "x 2>&1 | tail -5"]) {
 		assert.ok(PIPELINE_RE.test(c), `should flag: ${c}`);
 	}
-	assert.ok(!PIPELINE_RE.test("node --test tests/a.test.ts"));
+	// A redirect leaves the runner as the last command, so $? is still its status.
+	for (const c of ["node --test tests/a.test.ts", "x > out.txt", "x > out.log 2>&1", "x 2>&1"]) {
+		assert.ok(!PIPELINE_RE.test(c), `should not flag: ${c}`);
+	}
 });
 
 // --------------------------------------------------------------- doc parsing
@@ -407,4 +410,68 @@ test("## Tasks wins over ## Status when both exist", () => {
 `);
 	assert.deepEqual(parsed.tasks.map((t) => t.id), ["T1"]);
 	assert.equal(parsed.tasks[0].shape, "table");
+});
+
+// ------------------------------------------------ exit status honesty (audit)
+// A redirect to a file does not change the runner's exit status. Only a pipe
+// into a filter does. The first version treated both the same and discarded
+// runs whose EXIT=n was captured explicitly and correctly.
+test("a redirect to a file with an explicit EXIT=0 is an observed pass", () => {
+	const o = classifyOutcome({
+		command: 'pnpm vitest run a.test.tsx > /tmp/o.log 2>&1; echo "EXIT=$?"; tail -5 /tmp/o.log',
+		text: "EXIT=0\n Test Files  1 passed (1)\n      Tests  20 passed (20)\n",
+	});
+	assert.equal(o.code, "0");
+});
+
+test("a redirect to a file with an explicit EXIT=1 is an observed failure, not 'piped'", () => {
+	const o = classifyOutcome({
+		command: 'pnpm vitest run a.test.tsx > /tmp/o.log 2>&1; echo "EXIT=$?"; tail -5 /tmp/o.log',
+		text: "EXIT=1\n Tests  3 failed | 17 passed (20)\n",
+	});
+	assert.equal(o.code, "1");
+});
+
+test("2>&1 alone is not a pipeline", () => {
+	const o = classifyOutcome({
+		command: "node --test tests/a.test.ts 2>&1",
+		text: "# tests 12\n# pass 12\n# fail 0\n",
+	});
+	assert.equal(o.code, "0");
+});
+
+test("a pipe into a filter stays 'piped' even when EXIT= is echoed afterwards", () => {
+	// $? after a pipe is the filter's status, so the echoed value proves nothing.
+	const o = classifyOutcome({
+		command: 'node --test a.test.ts 2>&1 | grep -m2 Error; echo "EXIT=$?"',
+		text: "Error [ERR_MODULE_NOT_FOUND]\nEXIT=0\n",
+	});
+	assert.equal(o.code, "piped");
+});
+
+test("EXIT= with an equals sign is understood", () => {
+	const o = classifyOutcome({ command: "node --test a.test.ts", text: "EXIT=2\n" });
+	assert.equal(o.code, "2");
+});
+
+// ------------------------------------------- only plausible commits (audit)
+const commitsOf = (line) => parseDoc(`## Tasks\n\n- T1 S1 ${line}\n`).tasks[0].commits;
+
+test("a GitHub Actions run id is not a commit", () => {
+	assert.deepEqual(commitsOf("diag runs 38092721527 and 38092811888, committed b9b181a6e"), ["b9b181a6e"]);
+});
+
+test("a native review lineage id is not a commit", () => {
+	assert.deepEqual(
+		commitsOf("C1 commit 2f716b37fab29c3793e12922290881585720872d. Native review-fb329d05ec2b9b39 approved"),
+		["2f716b37fab29c3793e12922290881585720872d"],
+	);
+});
+
+test("abbreviated shas of 7 to 12 characters and full 40-character shas are kept", () => {
+	assert.deepEqual(commitsOf("a1b2c3d, 250cec03, b8b1ba1a3, 0123456789ab"), ["a1b2c3d", "250cec03", "b8b1ba1a3", "0123456789ab"]);
+});
+
+test("a short all-digit sha is still a sha", () => {
+	assert.deepEqual(commitsOf("committed 1234567"), ["1234567"]);
 });
