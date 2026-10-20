@@ -575,3 +575,65 @@ test("a section with no explicit ids is still numbered from S1", () => {
 `);
 	assert.deepEqual(parsed.specs.map((s) => s.id), ["S1", "S2", "S3"]);
 });
+
+// ------------------------------------- Tasks headings with a suffix (audit 5)
+// Nine documents in the measured corpus head the section "## Tasks and routes",
+// "## Tasks and routing", "## Tasks and acceptance" or "## Tasks / acceptance".
+// Only the exact heading was read, so all nine reported zero tasks while having
+// task rows plainly visible, and the "documents with readable tasks" figure was
+// low because of the parser, not the corpus.
+test("a Tasks heading with a suffix is read as the task section", () => {
+	for (const heading of ["Tasks and routes", "Tasks and routing", "Tasks and acceptance", "Tasks / acceptance"]) {
+		const parsed = parseDoc(`## ${heading}
+
+- [x] T1 (inline) — did the first thing
+- [ ] T2 (delegated) — second thing
+`);
+		assert.deepEqual(parsed.tasks.map((t) => t.id), ["T1", "T2"], `heading: ${heading}`);
+	}
+});
+
+test("the exact '## Tasks' heading still wins over a suffixed one", () => {
+	const parsed = parseDoc(`## Tasks and routes
+
+- [x] T9 from the suffixed section
+
+## Tasks
+
+| ID | Specs | Commit |
+|----|-------|--------|
+| T1 | S1 | abc1234 |
+`);
+	assert.deepEqual(parsed.tasks.map((t) => t.id), ["T1"]);
+	assert.equal(parsed.tasks[0].shape, "table");
+});
+
+test("a suffixed Tasks heading wins over a Status checklist", () => {
+	const parsed = parseDoc(`## Tasks and routes
+
+- [x] T1 (inline) — real task
+
+## Status
+
+- [x] 1. something else
+`);
+	assert.deepEqual(parsed.tasks.map((t) => t.id), ["T1"]);
+	assert.notEqual(parsed.tasks[0].shape, "status");
+});
+
+test("a heading that merely starts with the letters 'Tasks' is not a task section", () => {
+	const parsed = parseDoc(`## Taskset notes
+
+- [x] T1 (inline) — not under a Tasks heading
+`);
+	assert.deepEqual(parsed.tasks, []);
+});
+
+test("commits and specs are read from a suffixed Tasks section", () => {
+	const parsed = parseDoc(`## Tasks and routes
+
+- [x] T1 S1 (inline) — work. Commit: \`abc1234\`
+`);
+	assert.deepEqual(parsed.tasks[0].specIds, ["S1"]);
+	assert.deepEqual(parsed.tasks[0].commits, ["abc1234"]);
+});
